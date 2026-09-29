@@ -3,7 +3,7 @@
 # pipeline. Unchanged logic from the original camera.py.
 # ==========================================================
 import cv2
-from tkinter import Tk, filedialog
+#from tkinter import Tk, filedialog
 
 from app.core import config
 
