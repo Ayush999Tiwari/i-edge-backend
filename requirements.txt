@@ -12,8 +12,8 @@ Pillow==10.3.0
 imageio-ffmpeg
 
 ultralytics==8.2.18
-torch>=2.0.0
-torchvision>=0.15.0
+torch==2.5.1
+torchvision==0.20.1
 
 huggingface-hub==0.23.0
 paddleocr==3.7.0
