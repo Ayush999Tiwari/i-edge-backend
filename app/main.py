@@ -1,10 +1,3 @@
-# ==========================================================
-# Application entry point. Only: create app, configure CORS,
-# register routers, startup init, global exception handler.
-# No business logic lives here (was 768 lines with an entire
-# live-surveillance class + every vehicle route inlined -- all of
-# that moved to services/ and api/).
-# ==========================================================
 import os
 import traceback
 
@@ -20,7 +13,12 @@ app = FastAPI(title="Unified AI Video Surveillance & ANPR API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173","https://i-edge-frontend.vercel.app"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://i-edge-frontend.vercel.app",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -40,9 +38,18 @@ def on_startup():
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request, exc):
     traceback.print_exc()
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=3000, reload=True)
+
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=3000,
+        reload=True,
+    )
