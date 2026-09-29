@@ -10,8 +10,7 @@ opencv-python-headless==4.9.0.80
 numpy==1.26.4
 Pillow==10.3.0
 imageio-ffmpeg
-
-ultralytics==8.2.18
+ultralytics==8.3.0
 torch==2.5.1
 torchvision==0.20.1
 
