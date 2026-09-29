@@ -1,0 +1,249 @@
+# =========================================================
+# ENVIRONMENT & SECRETS
+# =========================================================
+.env
+.env.*
+!.env.example
+
+*.pem
+*.key
+*.crt
+secrets/
+credentials/
+service-account*.json
+
+
+# =========================================================
+# PYTHON
+# =========================================================
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.so
+*.pyd
+
+.Python
+python-version
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# =========================================================
+# DATABASE
+# =========================================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Local database files
+app.db
+vehicle.db
+surveillance.db
+
+
+# =========================================================
+# UPLOADS / GENERATED FILES
+# =========================================================
+uploads/
+processed_output/
+detections/
+video_clips/
+logs/
+
+# Uploaded / generated media
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.mpeg
+*.mpg
+
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.bmp
+*.tiff
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+
+# =========================================================
+# AI / ML MODELS
+# =========================================================
+*.pt
+*.pth
+*.onnx
+*.engine
+*.weights
+*.ckpt
+*.safetensors
+*.bin
+
+# Model/cache directories
+models/
+weights/
+runs/
+wandb/
+mlruns/
+.cache/
+.huggingface/
+.yolov5/
+
+
+# =========================================================
+# OPENCV / COMPUTER VISION
+# =========================================================
+*.avi
+*.mp4
+*.mov
+
+# Detection outputs
+runs/
+predict/
+inference/
+results/
+
+
+# =========================================================
+# JUPYTER
+# =========================================================
+.ipynb_checkpoints/
+
+
+# =========================================================
+# IDE / EDITORS
+# =========================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# VS Code local history
+.history/
+
+# =========================================================
+# OS FILES
+# =========================================================
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+
+
+# =========================================================
+# LOGS
+# =========================================================
+*.log
+*.out
+*.pid
+
+
+# =========================================================
+# NODE / FRONTEND (if frontend is inside this repo)
+# =========================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.next/
+.nuxt/
+dist/
+build/
+
+.vercel/
+.netlify/
+
+*.tsbuildinfo
+
+
+# =========================================================
+# FRONTEND ENV
+# =========================================================
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+
+# =========================================================
+# RENDER / DEPLOYMENT
+# =========================================================
+.render/
+render.yaml.bak
+
+
+# =========================================================
+# TEST / COVERAGE
+# =========================================================
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+
+# =========================================================
+# LOCAL CONFIG / MACHINE FILES
+# =========================================================
+*.local
+*.local.json
+
+# Personal notes / scratch
+scratch/
+notes/
+
+
+# =========================================================
+# BACKUP FILES
+# =========================================================
+*.bak
+*.backup
+*.old
+*.orig
+*~
