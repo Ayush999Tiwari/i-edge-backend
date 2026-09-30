@@ -236,23 +236,19 @@ def login(
         )
 
     # ------------------------------------------------------
-    # Social-only account
+    # Verify password
+    #
+    # Login method is not locked to the provider that created
+    # the account. If a password exists, manual login is allowed
+    # regardless of whether the account was created with Google,
+    # GitHub, or password registration.
     # ------------------------------------------------------
 
     if not user.password_hash:
-        provider = user.auth_provider or "social"
-
         raise HTTPException(
             status_code=400,
-            detail=(
-                f"This account uses {provider} login. "
-                f"Please continue with {provider.title()}."
-            ),
+            detail="Password login is not set up for this account. Please use Google or GitHub login, or set a password first.",
         )
-
-    # ------------------------------------------------------
-    # Verify password
-    # ------------------------------------------------------
 
     if not verify_password(
         credentials.password,
