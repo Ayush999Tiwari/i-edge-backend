@@ -4,7 +4,8 @@ python-multipart==0.0.9
 python-dotenv
 sqlalchemy
 python-jose[cryptography]
-passlib[bcrypt]
+passlib==1.7.4
+bcrypt==4.0.1
 
 opencv-python-headless==4.9.0.80
 numpy==1.26.4
