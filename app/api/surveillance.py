@@ -645,12 +645,28 @@ async def start_live_surveillance(
 
     session_id = uuid.uuid4().hex
 
+    print(
+        f"[LIVE START] pid={os.getpid()} "
+        f"session={session_id}"
+    )
+
     try:
         session = surveillance_service.create_live_session(
             source=save_path,
             session_id=session_id,
         )
+
+        print(
+            f"[LIVE START CREATED] pid={os.getpid()} "
+            f"session={session_id}"
+        )
+
         session.start()
+
+        print(
+            f"[LIVE START RUNNING] pid={os.getpid()} "
+            f"session={session_id}"
+        )
     except Exception as e:
         traceback.print_exc()
         surveillance_service.remove_live_session(session_id)
