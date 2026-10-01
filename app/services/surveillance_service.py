@@ -2,6 +2,8 @@ import threading
 import os
 import shutil
 import traceback
+import time
+from datetime import datetime
 from typing import Optional, List
 
 import cv2
@@ -28,6 +30,351 @@ _detectors_lock = threading.Lock()
 
 _email_manager: Optional[EmailAlertManager] = None
 _email_manager_lock = threading.Lock()
+
+
+# ==========================================================
+# Low-latency live surveillance session
+# ==========================================================
+
+class LiveSurveillanceSession:
+    """
+    Processes an MP4/RTSP source as a live stream.
+
+    The capture loop never waits for AI inference. Person/crowd, fire,
+    and violence detection run in separate workers against the latest
+    available frame, so slow inference cannot build a frame backlog.
+    """
+
+    def __init__(self, source: str, session_id: str):
+        self.source = source
+        self.session_id = session_id
+        self.running = False
+        self.finished = False
+
+        self._stop_event = threading.Event()
+        self._lock = threading.Lock()
+        self._latest_frame = None
+        self._jpeg = None
+        self._person_detections = []
+        self._fire_detections = []
+        self._violence = {"detected": False, "confidence": 0.0}
+        self._person_count = 0
+        self._events = []
+        self._last_event_at = {}
+        self._threads = []
+
+        # Each live session owns its detectors so the three workers can
+        # actually run independently without sharing detector state.
+        self.person_detector = PersonDetector()
+        self.fire_detector = (
+            FireDetector() if config.ENABLE_FIRE_DETECTION else None
+        )
+        self.violence_detector = (
+            VoilenceDetector() if config.ENABLE_VOILENCE_DETECTION else None
+        )
+
+    def start(self):
+        if self.running:
+            return
+
+        self.running = True
+        self.finished = False
+
+        self._threads = [
+            threading.Thread(target=self._capture_loop, daemon=True),
+            threading.Thread(target=self._person_worker, daemon=True),
+        ]
+
+        if self.fire_detector:
+            self._threads.append(
+                threading.Thread(target=self._fire_worker, daemon=True)
+            )
+
+        if self.violence_detector:
+            self._threads.append(
+                threading.Thread(target=self._violence_worker, daemon=True)
+            )
+
+        for thread in self._threads:
+            thread.start()
+
+    def stop(self):
+        self._stop_event.set()
+        self.running = False
+
+    def _capture_loop(self):
+        cap = cv2.VideoCapture(self.source)
+
+        if not cap.isOpened():
+            self._add_event(
+                "system",
+                0.0,
+                "Unable to open video source",
+                cooldown=0,
+            )
+            self.running = False
+            self.finished = True
+            return
+
+        fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+        frame_delay = 1.0 / max(fps, 1.0)
+
+        try:
+            while not self._stop_event.is_set():
+                started = time.monotonic()
+                ok, frame = cap.read()
+
+                if not ok:
+                    break
+
+                with self._lock:
+                    self._latest_frame = frame.copy()
+                    annotated = self._annotate_frame(frame)
+                    encoded, buffer = cv2.imencode(".jpg", annotated)
+                    if encoded:
+                        self._jpeg = buffer.tobytes()
+
+                elapsed = time.monotonic() - started
+                remaining = frame_delay - elapsed
+                if remaining > 0:
+                    self._stop_event.wait(remaining)
+
+        finally:
+            cap.release()
+            self.running = False
+            self.finished = True
+
+    def _get_latest_frame(self):
+        with self._lock:
+            if self._latest_frame is None:
+                return None
+            return self._latest_frame.copy()
+
+    def _person_worker(self):
+        interval = 0.20  # about 5 AI checks/sec; display remains independent
+
+        while not self._stop_event.is_set():
+            frame = self._get_latest_frame()
+            if frame is not None:
+                try:
+                    results = self.person_detector.detect_and_track(frame)
+                    detections = self.person_detector.get_detections(results)
+                    person_count = self.person_detector.count_persons(detections)
+
+                    with self._lock:
+                        self._person_detections = detections
+                        self._person_count = person_count
+
+                    if person_count >= config.CROWD_THRESHOLD:
+                        self._add_event(
+                            "crowd",
+                            1.0,
+                            f"Crowd detected: {person_count} people",
+                            cooldown=config.CROWD_ALERT_COOLDOWN,
+                        )
+                except Exception as exc:
+                    print(f"[LIVE PERSON ERROR] {exc}")
+
+            self._stop_event.wait(interval)
+
+    def _fire_worker(self):
+        interval = max(
+            float(getattr(config, "FIRE_CHECK_INTERVAL_SECONDS", 2.0)),
+            0.5,
+        )
+
+        while not self._stop_event.is_set():
+            frame = self._get_latest_frame()
+            if frame is not None:
+                try:
+                    detections = self.fire_detector.detect(frame)
+                    with self._lock:
+                        self._fire_detections = detections
+
+                    if detections:
+                        best = max(
+                            detections,
+                            key=lambda item: float(item.get("confidence", 0.0)),
+                        )
+                        self._add_event(
+                            "fire",
+                            float(best.get("confidence", 0.0)),
+                            "Fire detected",
+                            cooldown=config.FIRE_ALERT_COOLDOWN,
+                        )
+                except Exception as exc:
+                    print(f"[LIVE FIRE ERROR] {exc}")
+
+            self._stop_event.wait(interval)
+
+    def _violence_worker(self):
+        interval = max(
+            float(getattr(config, "VOILENCE_CHECK_INTERVAL_SECONDS", 1.0)),
+            0.5,
+        )
+
+        while not self._stop_event.is_set():
+            frame = self._get_latest_frame()
+            if frame is not None:
+                try:
+                    result = self.violence_detector.detect_snapshot(frame)
+                    with self._lock:
+                        self._violence = result
+
+                    if result.get("detected"):
+                        self._add_event(
+                            "voilence",
+                            float(result.get("confidence", 0.0)),
+                            "Violence detected",
+                            cooldown=config.VOILENCE_ALERT_COOLDOWN,
+                        )
+                except Exception as exc:
+                    print(f"[LIVE VIOLENCE ERROR] {exc}")
+
+            self._stop_event.wait(interval)
+
+    def _annotate_frame(self, frame):
+        for detection in self._person_detections:
+            try:
+                x1, y1, x2, y2 = map(int, detection["bbox"])
+                obj_id = detection.get("id", -1)
+                confidence = float(detection.get("confidence", 0.0))
+                class_name = detection.get("class", "person")
+
+                cv2.rectangle(
+                    frame,
+                    (x1, y1),
+                    (x2, y2),
+                    config.BOX_COLOR,
+                    config.BOX_THICKNESS,
+                )
+                cv2.putText(
+                    frame,
+                    f"{class_name} ID:{obj_id} {confidence:.2f}",
+                    (x1, max(y1 - 8, 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    config.FONT_SCALE,
+                    config.TEXT_COLOR,
+                    2,
+                )
+            except Exception:
+                continue
+
+        for fire in self._fire_detections:
+            try:
+                x1, y1, x2, y2 = map(int, fire["bbox"])
+                confidence = float(fire.get("confidence", 0.0))
+                cv2.rectangle(
+                    frame,
+                    (x1, y1),
+                    (x2, y2),
+                    config.FIRE_BOX_COLOR,
+                    config.BOX_THICKNESS,
+                )
+                cv2.putText(
+                    frame,
+                    f"fire {confidence:.2f}",
+                    (x1, max(y1 - 8, 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    config.FONT_SCALE,
+                    config.FIRE_BOX_COLOR,
+                    2,
+                )
+            except Exception:
+                continue
+
+        person_count = self._person_count
+        cv2.putText(
+            frame,
+            f"People: {person_count}",
+            (20, 35),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            config.TEXT_COLOR,
+            2,
+        )
+
+        if self._violence.get("detected"):
+            confidence = float(self._violence.get("confidence", 0.0))
+            cv2.putText(
+                frame,
+                f"VIOLENCE {confidence:.2f}",
+                (20, 75),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                config.ALERT_COLOR,
+                2,
+            )
+
+        return frame
+
+    def _add_event(self, event_type, confidence, message, cooldown):
+        now = time.monotonic()
+        last = self._last_event_at.get(event_type)
+
+        if last is not None and now - last < cooldown:
+            return
+
+        event = {
+            "id": f"{self.session_id}-{len(self._events) + 1}",
+            "event_type": event_type,
+            "confidence": float(confidence),
+            "message": message,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        with self._lock:
+            self._events.insert(0, event)
+            self._events = self._events[:100]
+            self._last_event_at[event_type] = now
+
+    def get_jpeg(self):
+        with self._lock:
+            return self._jpeg
+
+    def get_events(self):
+        with self._lock:
+            return list(self._events)
+
+    def get_status(self):
+        with self._lock:
+            return {
+                "session_id": self.session_id,
+                "status": (
+                    "running"
+                    if self.running
+                    else "completed"
+                    if self.finished
+                    else "starting"
+                ),
+                "finished": self.finished,
+                "person_count": self._person_count,
+                "event_count": len(self._events),
+            }
+
+
+_live_sessions = {}
+_live_sessions_lock = threading.Lock()
+
+
+def create_live_session(source: str, session_id: str) -> LiveSurveillanceSession:
+    session = LiveSurveillanceSession(source, session_id)
+    with _live_sessions_lock:
+        _live_sessions[session_id] = session
+    return session
+
+
+def get_live_session(session_id: str) -> Optional[LiveSurveillanceSession]:
+    with _live_sessions_lock:
+        return _live_sessions.get(session_id)
+
+
+def remove_live_session(session_id: str):
+    with _live_sessions_lock:
+        session = _live_sessions.pop(session_id, None)
+
+    if session:
+        session.stop()
 
 
 def get_live_system() -> SurveillanceSystem:

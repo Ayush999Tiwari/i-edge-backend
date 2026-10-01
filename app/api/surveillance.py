@@ -5,6 +5,7 @@
 import os
 import traceback
 from typing import Optional
+import uuid
 
 from fastapi import (
     APIRouter,
@@ -622,6 +623,125 @@ async def incidents(
         }
         for e in events
     ]
+
+
+# ==========================================================
+# LOW-LATENCY LIVE SURVEILLANCE
+# ==========================================================
+
+@router.post("/live/start")
+async def start_live_surveillance(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Start a low-latency surveillance session from an uploaded video."""
+    try:
+        save_path = surveillance_service.save_uploaded_video(
+            file.filename,
+            file.file,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    session_id = uuid.uuid4().hex
+
+    try:
+        session = surveillance_service.create_live_session(
+            source=save_path,
+            session_id=session_id,
+        )
+        session.start()
+    except Exception as e:
+        traceback.print_exc()
+        surveillance_service.remove_live_session(session_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unable to start live surveillance: {e}",
+        )
+
+    return {"session_id": session_id, "status": "running"}
+
+
+@router.get("/live/stream/{session_id}")
+def live_stream(session_id: str):
+    """Stream the latest annotated frame as an MJPEG stream."""
+    session = surveillance_service.get_live_session(session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Live session not found")
+
+    def generate():
+        while session.running or not session.finished:
+            jpeg = session.get_jpeg()
+
+            if jpeg is None:
+                import time
+                time.sleep(0.03)
+                continue
+
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n"
+                b"Content-Length: "
+                + str(len(jpeg)).encode()
+                + b"\r\n\r\n"
+                + jpeg
+                + b"\r\n"
+            )
+
+            import time
+            time.sleep(0.03)
+
+    return StreamingResponse(
+        generate(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+    )
+
+
+@router.get("/live/events/{session_id}")
+async def live_events(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    session = surveillance_service.get_live_session(session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Live session not found")
+
+    return {
+        "session_id": session_id,
+        "events": session.get_events(),
+        "status": session.get_status(),
+    }
+
+
+@router.get("/live/status/{session_id}")
+async def live_status(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    session = surveillance_service.get_live_session(session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Live session not found")
+
+    return session.get_status()
+
+
+@router.post("/live/stop/{session_id}")
+async def stop_live_surveillance(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    session = surveillance_service.get_live_session(session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Live session not found")
+
+    surveillance_service.remove_live_session(session_id)
+
+    return {"session_id": session_id, "status": "stopped"}
 
 
 # ==========================================================
