@@ -7,6 +7,7 @@ python-jose[cryptography]
 passlib==1.7.4
 bcrypt==4.0.1
 opencv-python-headless==4.9.0.80
+lapx>=0.5.2
 numpy==1.26.4
 Pillow==10.3.0
 imageio-ffmpeg
