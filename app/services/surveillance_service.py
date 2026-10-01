@@ -359,19 +359,41 @@ _live_sessions_lock = threading.Lock()
 
 def create_live_session(source: str, session_id: str) -> LiveSurveillanceSession:
     session = LiveSurveillanceSession(source, session_id)
+
     with _live_sessions_lock:
         _live_sessions[session_id] = session
+        print(
+            f"[LIVE CREATED] session={session_id} "
+            f"pid={os.getpid()} "
+            f"active_sessions={list(_live_sessions.keys())}"
+        )
+
     return session
 
 
 def get_live_session(session_id: str) -> Optional[LiveSurveillanceSession]:
     with _live_sessions_lock:
-        return _live_sessions.get(session_id)
+        session = _live_sessions.get(session_id)
+
+        print(
+            f"[LIVE LOOKUP] session={session_id} "
+            f"found={session is not None} "
+            f"pid={os.getpid()} "
+            f"active_sessions={list(_live_sessions.keys())}"
+        )
+
+        return session
 
 
 def remove_live_session(session_id: str):
     with _live_sessions_lock:
         session = _live_sessions.pop(session_id, None)
+
+        print(
+            f"[LIVE REMOVED] session={session_id} "
+            f"pid={os.getpid()} "
+            f"active_sessions={list(_live_sessions.keys())}"
+        )
 
     if session:
         session.stop()
