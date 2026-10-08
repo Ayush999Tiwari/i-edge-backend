@@ -1,34 +1,3 @@
-# ==========================================================
-# Generic background worker for slow / network-bound detectors
-# (Roboflow fire + violence calls).
-#
-# WHY THIS EXISTS
-# ----------------
-# Calling a hosted API inside the main frame loop blocks every other
-# frame from being read/processed until the HTTP response comes
-# back. On video input this means the pipeline falls behind
-# real-time and "backlog" builds up -- which looks like latency, but
-# isn't the API being slow (confirmed: Roboflow is instant on a
-# single test image). Simply increasing FIRE_CHECK_INTERVAL only
-# reduces how *often* this blocking happens, it doesn't remove it.
-#
-# WHAT THIS CLASS GUARANTEES (so it doesn't cause new problems later)
-# ---------------------------------------------------------------
-# 1. Never blocks the caller. submit_frame() just stores a reference
-#    and returns immediately.
-# 2. Never builds a backlog. Only the MOST RECENT frame is kept --
-#    if the worker is still processing frame N when frame N+3
-#    arrives, frames N+1/N+2 are simply dropped. The API is always
-#    working on the freshest data instead of catching up on stale
-#    frames (which is both wasted work and wrong -- you'd be
-#    alerting on a fire that may no longer be in view).
-# 3. One bad response can't kill the thread. Every detect() call is
-#    wrapped in try/except; the worker loop keeps running for the
-#    life of the process.
-# 4. Its own throttle is TIME-based, not frame-count based, so it
-#    behaves the same regardless of how fast the main loop runs.
-# 5. Clean shutdown via stop() -- no dangling threads.
-# ==========================================================
 import threading
 import time
 import traceback
