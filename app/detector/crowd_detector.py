@@ -1,13 +1,3 @@
-# ==========================================================
-# "Crowd detection" was never a separate model in the original
-# project -- it was a rule inside Rule_engine.py:
-#     elif person_count >= config.CROWD_THRESHOLD: ... "crowd" incident
-#
-# The target API asks for a standalone POST /api/surveillance/crowd
-# endpoint, so this module exposes that exact rule as a small,
-# reusable function on top of the *unchanged* PersonDetector, rather
-# than inventing a new detection algorithm.
-# ==========================================================
 from app.core import config
 from app.detector.person_detector import PersonDetector
 
