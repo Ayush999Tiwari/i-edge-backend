@@ -1,23 +1,8 @@
-# ==========================================================
-# Fire/smoke detector (Roboflow-hosted workflow). Same throttling
-# (should_run), same confidence threshold, same bbox math as the
-# original -- the ONLY behavior change is where the temp JPEG for
-# the Roboflow call gets written (see _TEMP_DIR below), to cut
-# per-call latency without touching detection logic.
-# ==========================================================
+
 import cv2
 import os
 import tempfile
-
 from app.core import config
-
-# The original wrote the temp frame with tempfile's default dir,
-# which is real disk. On Linux, /dev/shm is a RAM-backed tmpfs --
-# writing/reading there is effectively free compared to a physical
-# disk write, and it's a same-machine, single-call optimization with
-# no change to what gets sent to Roboflow. Falls back to the normal
-# system temp dir on platforms without /dev/shm (e.g. Windows), so
-# this can never break anything, only speed it up where available.
 _TEMP_DIR = "/dev/shm" if os.path.isdir("/dev/shm") else tempfile.gettempdir()
 
 try:
