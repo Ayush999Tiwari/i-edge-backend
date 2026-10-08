@@ -1,26 +1,3 @@
-# ==========================================================
-# Vehicle Intelligence routes.
-#
-# Endpoint mapping vs the original main.py:
-#   POST /detect            <- was POST /api/vehicle/upload (renamed
-#                               to match the requested API design;
-#                               same upload + background-pipeline
-#                               behavior)
-#   POST /plate              new: single-image plate/OCR lookup,
-#                               built from the existing (unchanged)
-#                               detect_and_crop_plate() + OCR reader
-#   GET  /history            <- was GET /api/vehicle/all-results
-#   GET  /analytics/{job_id} <- unchanged
-#   GET  /status/{job_id}    <- unchanged
-#   GET  /video/{job_id}     kept (used by the frontend to stream the
-#                               processed video) -- not in the
-#                               requested list, but dropping it would
-#                               break existing playback functionality
-#   GET  /download/{job_id}  kept, same reasoning as /video
-#
-# Every route body is just: validate -> call vehicle_service -> shape
-# the response. No detection or persistence logic lives here.
-# ==========================================================
 import os
 import traceback
 
