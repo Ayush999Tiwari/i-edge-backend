@@ -1,14 +1,6 @@
-# ==========================================================
-# Person/object detector (YOLO + ByteTrack). Unchanged logic from
-# the original person_detector.py -- same tracker args, same
-# confidence/IOU/area filtering.
-# ==========================================================
 import torch
 from ultralytics import YOLO
-
 from app.core import config
-
-
 class PersonDetector:
     def __init__(self):
         print(f"[DETECTOR] Loading model: {config.MODEL_NAME}")
