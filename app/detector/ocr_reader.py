@@ -1,13 +1,6 @@
-# ==========================================================
-# License-plate OCR. Unchanged from the original ocr_reader.py --
-# same PaddleOCR settings, same preprocessing, same confidence /
-# noise-token filtering. AI-only: no FastAPI, no DB, no HTTP.
-# ==========================================================
 import os
-
 os.environ["FLAGS_use_mkldnn"] = "0"
 os.environ["FLAGS_call_stack_level"] = "1"
-
 import re
 import cv2
 import numpy as np
