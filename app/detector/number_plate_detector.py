@@ -1,17 +1,3 @@
-# ==========================================================
-# License-plate box detector (Roboflow-hosted workflow).
-# Renamed from Number_plate_detector.py -> number_plate_detector.py
-# to fix inconsistent detector filenames.
-#
-# Same workflow calls, same confidence filter (>= 0.40), same
-# crop math as the original. Only change: paths and credentials
-# now come from app.core.config instead of being hardcoded
-# (the original had a hardcoded fallback Roboflow API key baked
-# into the source and a hardcoded Windows path -- both replaced
-# with the same config.ROBOFLOW_API_KEY already used by the other
-# detectors, and config-driven folders). Detection thresholds /
-# workspace / workflow id are unchanged.
-# ==========================================================
 import cv2
 import os
 import tempfile
