@@ -1,20 +1,5 @@
-# ==========================================================
-# Violence detector (Roboflow-hosted model). Unchanged logic from
-# voilence_detector.py -- same parsing for classification / detection
-# / nested-workflow response shapes, same confidence threshold.
-#
-# Renamed file for filename consistency. Class name (VoilenceDetector)
-# and its public methods are kept exactly as-is since other modules
-# reference them and renaming API surface isn't necessary. The
-# tkinter-based `_run_standalone()` CLI test harness (image picker,
-# `if __name__ == "__main__"`) was dropped: it was dead code never
-# imported by the API, and importing tkinter in a server process is
-# unwanted -- this does not touch any detection logic.
-# ==========================================================
 import cv2
-
 from app.core import config
-
 try:
     from inference_sdk import InferenceHTTPClient
 except ImportError:
