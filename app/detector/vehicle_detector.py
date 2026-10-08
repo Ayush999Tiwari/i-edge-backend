@@ -1,26 +1,3 @@
-# ==========================================================
-# Vehicle detector: YOLO tracking across a video + OCR voting on
-# the best crop per tracked vehicle.
-#
-# This used to be one function, process_video(), which ALSO wrote
-# the recognized plate straight to the database (a detector file
-# doing DB writes -- one of the architecture issues called out in
-# the refactor). It's now split in two, with identical thresholds
-# and control flow, just re-drawn across a layer boundary:
-#
-#   track_vehicles()  - AI-only: runs YOLO+ByteTrack over the video,
-#                        writes the annotated output video, returns
-#                        the best crop / timestamp per tracked
-#                        vehicle. No DB access, no persistent
-#                        live-preview folder (removed).
-#   ocr_vote()         - AI-only: unchanged 5-way image-enhancement
-#                        OCR voting.
-#
-# services/vehicle_service.py now owns the loop that calls
-# detect_plate_box() + ocr_vote() per track and persists results --
-# see that file for the part that used to live at the bottom of the
-# original process_video().
-# ==========================================================
 import cv2
 import os
 import threading
@@ -28,7 +5,7 @@ from collections import Counter
 from ultralytics import YOLO
 
 from app.core import config
-from app.detector.number_plate_detector import detect_plate_box  # noqa: F401 (re-exported for the service)
+from app.detector.number_plate_detector import detect_plate_box  
 
 VALID_CLASSES = [
     "car",
@@ -41,9 +18,7 @@ VALID_CLASSES = [
 ]
 
 CONF_THRESHOLD = 0.5
-
 model = YOLO("yolo11n.pt")
-
 _ocr_reader = None
 _ocr_lock = threading.Lock()
 
