@@ -1,14 +1,3 @@
-# ==========================================================
-# Single SQLAlchemy database for the whole application.
-#
-# This replaces TWO previous, duplicate DB layers:
-#   1. db_manager.py  - SQLAlchemy engine for vehicle_logs / video_jobs
-#   2. database.py    - a second, raw sqlite3 DatabaseManager for
-#                        live-surveillance "events"
-#
-# Both now share this one engine/session and write through the
-# models in models.py. No detection logic lives here.
-# ==========================================================
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
