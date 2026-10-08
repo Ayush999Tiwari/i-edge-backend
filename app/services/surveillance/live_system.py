@@ -1,35 +1,3 @@
-# ==========================================================
-# Live surveillance orchestrator (person + fire + violence + crowd,
-# on a webcam/video feed). This is the SurveillanceSystem class that
-# used to live directly inside main.py.
-#
-# Frame-processing logic (detection, drawing, alerting, rule
-# evaluation) is UNCHANGED. Three real changes vs. the original:
-#
-# 1. Person-detection alerts used to be written via database.py's raw
-#    sqlite3 DatabaseManager.log_event(); they now go through the
-#    shared SQLAlchemy database as a SurveillanceEvent row, per the
-#    "one database only" requirement. Nothing about *when* an alert
-#    fires, its cooldown, or its content was changed.
-#
-# 2. Fire and violence detection (both hosted Roboflow API calls) no
-#    longer run synchronously inside process_frame(). They now run on
-#    AsyncDetectorWorker background threads (see background_worker.py)
-#    so a slow/blocked network call can never stall frame reads. The
-#    detection algorithms/thresholds themselves are untouched -- only
-#    *when* the call happens (background thread, latest-frame-only,
-#    time-throttled) changed. See background_worker.py's docstring
-#    for exactly what guarantees this gives.
-#
-# 3. No persistent detections/ or video_clips/ folder. Incident video
-#    clip recording (IncidentRecorder) and person-alert snapshots are
-#    removed entirely -- a person-tracking alert now just logs the
-#    event with no image. A fire/crowd/violence INCIDENT still gets a
-#    snapshot, because the email alert needs a file to attach, but
-#    that snapshot is now a short-lived Python tempfile (auto-cleaned
-#    right after the email is sent), not a file kept in a project-
-#    managed folder.
-# ==========================================================
 import os
 import tempfile
 from datetime import datetime
