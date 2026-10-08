@@ -1,32 +1,3 @@
-# # ==========================================================
-# # Auth routes. Unchanged behavior from the original auth.py:
-# # same prefix, same env-based admin credential check, same JWT
-# # shape. Only the JWT creation itself moved to core/security.py.
-# # ==========================================================
-# from fastapi import APIRouter, HTTPException
-
-# from app.core.config import ADMIN_EMAIL, ADMIN_PASSWORD
-# from app.core.security import create_access_token
-# from app.schemas import LoginRequest, TokenResponse
-
-# router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
-
-
-# @router.post("/login", response_model=TokenResponse)
-# def login(credentials: LoginRequest):
-#     if credentials.email != ADMIN_EMAIL or credentials.password != ADMIN_PASSWORD:
-#         raise HTTPException(status_code=401, detail="Invalid email or password")
-
-#     token = create_access_token({"sub": credentials.email})
-#     return {"access_token": token, "token_type": "bearer"}
-
-
-
-
-
-
-
-
 import secrets
 from urllib.parse import urlencode
 
